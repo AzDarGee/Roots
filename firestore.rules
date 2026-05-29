@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false; 
+    }
+
+    // Auth & Utilities
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isTreeOwner(treeId) {
+      return get(/databases/$(database)/documents/trees/$(treeId)).data.ownerId == request.auth.uid;
+    }
+
+    // Validation Blueprints
+    function isValidTree(data) {
+      return data.keys().hasAll(['name', 'ownerId', 'createdAt', 'updatedAt']) 
+        && data.keys().size() <= 6
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.ownerId == request.auth.uid;
+    }
+
+    function isValidNode(data) {
+      return data.keys().hasAll(['firstName', 'lastName', 'x', 'y', 'updatedAt'])
+        && data.firstName is string && data.firstName.size() <= 100
+        && data.lastName is string && data.lastName.size() <= 100
+        && data.x is number
+        && data.y is number;
+    }
+
+    function isValidEdge(data) {
+      return data.keys().hasAll(['source', 'target'])
+        && data.source is string && data.source.size() <= 128
+        && data.target is string && data.target.size() <= 128;
+    }
+
+    function isValidLog(data) {
+      return data.keys().hasAll(['userId', 'action', 'timestamp'])
+        && data.userId == request.auth.uid
+        && data.action is string && data.action.size() <= 200;
+    }
+
+    // Collections
+    match /trees/{treeId} {
+      allow read: if isSignedIn() && (existing().ownerId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() 
+        && isValidId(treeId)
+        && isValidTree(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() 
+        && existing().ownerId == request.auth.uid
+        && isValidTree(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+
+      match /nodes/{nodeId} {
+        allow read: if isSignedIn() && isTreeOwner(treeId);
+        allow list: if isSignedIn() && isTreeOwner(treeId); // Protected by tree ownership rule.
+        allow create: if isSignedIn() 
+          && isValidId(nodeId)
+          && isTreeOwner(treeId)
+          && isValidNode(incoming())
+          && (incoming().get('photoUrl', '') is string)
+          && incoming().updatedAt == request.time;
+        allow update: if isSignedIn() 
+          && isTreeOwner(treeId)
+          && isValidNode(incoming())
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['firstName', 'lastName', 'x', 'y', 'photoUrl', 'details', 'updatedAt']);
+        allow delete: if isSignedIn() && isTreeOwner(treeId);
+      }
+
+      match /edges/{edgeId} {
+        allow read: if isSignedIn() && isTreeOwner(treeId);
+        allow list: if isSignedIn() && isTreeOwner(treeId);
+        allow create: if isSignedIn() 
+          && isValidId(edgeId)
+          && isTreeOwner(treeId)
+          && isValidEdge(incoming());
+        allow update: if isSignedIn() 
+          && isTreeOwner(treeId)
+          && isValidEdge(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['source', 'target', 'label']);
+        allow delete: if isSignedIn() && isTreeOwner(treeId);
+      }
+
+      match /logs/{logId} {
+        allow read: if isSignedIn() && isTreeOwner(treeId);
+        allow list: if isSignedIn() && isTreeOwner(treeId);
+        allow create: if isSignedIn() 
+          && isValidId(logId)
+          && isTreeOwner(treeId)
+          && isValidLog(incoming())
+          && incoming().timestamp == request.time;
+        allow update: if false; // Logs are append-only
+        allow delete: if false; // Logs are immutable
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Roots - Family Tree Builder",
+  "description": "Collaborative family tree builder and viewer",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

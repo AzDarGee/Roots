@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "Tree": {
+      "title": "Family Tree",
+      "description": "Represents a family tree project.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the family tree"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the creator"
+        },
+        "createdAt": {
+          "type": "object",
+          "description": "Timestamp"
+        },
+        "updatedAt": {
+          "type": "object",
+          "description": "Timestamp"
+        }
+      },
+      "required": ["name", "ownerId"]
+    },
+    "PersonNode": {
+      "title": "Person Node",
+      "description": "A person in the family tree.",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "photoUrl": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "object"
+        }
+      },
+      "required": ["firstName", "lastName", "x", "y"]
+    },
+    "ConnectionEdge": {
+      "title": "Connection Edge",
+      "description": "A relationship between two people.",
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": ["source", "target"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Log of actions performed inside a tree for the privacy dashboard.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "object"
+        }
+      },
+      "required": ["userId", "action"]
+    }
+  },
+  "firestore": {
+    "/trees/{treeId}": {
+      "schema": {
+        "$ref": "#/entities/Tree"
+      },
+      "description": "Top-level family tree documents."
+    },
+    "/trees/{treeId}/nodes/{nodeId}": {
+      "schema": {
+        "$ref": "#/entities/PersonNode"
+      },
+      "description": "Persons belonging to a specific family tree."
+    },
+    "/trees/{treeId}/edges/{edgeId}": {
+      "schema": {
+        "$ref": "#/entities/ConnectionEdge"
+      },
+      "description": "Relationships between members of a specific family tree."
+    },
+    "/trees/{treeId}/logs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/ActivityLog"
+      },
+      "description": "Audit trails and privacy logs for actions on the tree."
+    }
+  }
+}
