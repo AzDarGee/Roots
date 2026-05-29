@@ -6,8 +6,8 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* ./
-# Use npm ci for clean, deterministic installations
-RUN npm ci
+# Use npm install to ensure package-lock is updated if out of sync
+RUN npm install
 
 # 2. Rebuild the source code only when needed
 FROM base AS builder
